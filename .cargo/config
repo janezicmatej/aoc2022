@@ -1,0 +1,5 @@
+[alias]
+prepare = "run --bin prepare --"
+download = "run --bin download --"
+
+solve = "run --bin"

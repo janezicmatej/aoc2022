@@ -1,0 +1,15 @@
+name: Clippy
+
+on: push
+
+env:
+    CARGO_TERM_COLOR: always
+
+jobs:
+    clippy:
+        runs-on: ubuntu-latest
+        name: Lint (clippy)
+        steps:
+            - uses: actions/checkout@v2
+            - name: cargo clippy
+              run: cargo clippy -- -D warnings
