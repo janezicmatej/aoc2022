@@ -1,4 +1,4 @@
-use std::{fmt::Debug, str::FromStr};
+use std::{fmt::Debug, iter::Sum, str::FromStr};
 
 pub fn to_vec<T>(input: &str, split: char) -> Vec<T>
 where
@@ -24,4 +24,16 @@ where
                 .collect()
         })
         .collect()
+}
+
+pub fn sum_lines<T>(lines: &str) -> T
+where
+    T: FromStr + Sum,
+    <T as FromStr>::Err: Debug,
+{
+    lines
+        .split('\n')
+        .map(|x| x.parse::<T>().unwrap())
+        .into_iter()
+        .sum()
 }
