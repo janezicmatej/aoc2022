@@ -1,20 +1,20 @@
-use aoc::helpers::sum_lines;
+use aoc::helpers::to_vec;
 pub fn part_one(input: &str) -> Option<u32> {
-    let mut max = u32::min_value();
-    for elf in input.trim().split("\n\n") {
-        let current = sum_lines(elf);
-        if current > max {
-            max = current;
-        }
-    }
-    Some(max)
+    Some(
+        input
+            .trim()
+            .split("\n\n")
+            .map(|x| to_vec(x, '\n').iter().sum())
+            .max()
+            .unwrap(),
+    )
 }
 pub fn part_two(input: &str) -> Option<u32> {
-    let mut max = Vec::<u32>::new();
-    for elf in input.trim().split("\n\n") {
-        let current = sum_lines(elf);
-        max.push(current);
-    }
+    let mut max: Vec<u32> = input
+        .trim()
+        .split("\n\n")
+        .map(|x| to_vec(x, '\n').iter().sum())
+        .collect();
     max.sort_by(|a, b| b.cmp(a));
     Some(max[..3].iter().sum())
 }
