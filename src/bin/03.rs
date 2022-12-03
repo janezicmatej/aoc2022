@@ -4,6 +4,10 @@ use aoc::helpers::ASCII;
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
 
+fn priority(c: char) -> u32 {
+    1 + (c as u8 - 'a' as u8) as u32
+}
+
 pub fn part_one(input: &str) -> Option<u32> {
     let mut score = 0;
     for rucksack in input.trim().split('\n') {
@@ -11,7 +15,7 @@ pub fn part_one(input: &str) -> Option<u32> {
         let set: HashSet<char> = rucksack[..compartment_size].chars().collect();
         for item in rucksack[compartment_size..].chars() {
             if set.contains(&item) {
-                score += 1 + ASCII.iter().position(|&x| x == item).unwrap() as u32;
+                score += priority(item);
                 break;
             }
         }
@@ -36,8 +40,8 @@ pub fn part_two(input: &str) -> Option<u32> {
             }
         }
         map.retain(|_, &mut v| v == 3);
-        let common_item = map.keys().next().unwrap();
-        score += 1 + ASCII.iter().position(|&x| x == *common_item).unwrap() as u32;
+        let item = map.keys().next().unwrap();
+        score += priority(*item);
     }
     Some(score)
 }
