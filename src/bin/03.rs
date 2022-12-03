@@ -3,9 +3,18 @@ use std::ops::Not;
 use aoc::helpers::ASCII;
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
+use lazy_static::lazy_static;
+
+lazy_static! {
+    static ref PRIORITY: HashMap<char, u32> = ASCII
+        .iter()
+        .enumerate()
+        .map(|(i, x)| (*x, (i + 1) as u32))
+        .collect();
+}
 
 fn priority(c: char) -> u32 {
-    1 + (c as u8 - 'a' as u8) as u32
+    PRIORITY[&c]
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
