@@ -1,15 +1,17 @@
-use lazy_static::lazy_static;
-use regex::Regex;
+use itertools::Itertools;
 
 fn read_line(line: &str) -> ((u32, u32), (u32, u32)) {
-    lazy_static! {
-        static ref RE: Regex = Regex::new(r"(\d*)-(\d*),(\d*)-(\d*)").unwrap();
-    }
-    let cap = RE.captures(line).unwrap();
-    (
-        (cap[1].parse().unwrap(), cap[2].parse().unwrap()),
-        (cap[3].parse().unwrap(), cap[4].parse().unwrap()),
-    )
+    line.split(',')
+        .map(|x| {
+            x.split('-')
+                .map(|y| y.parse().unwrap())
+                .tuples()
+                .next()
+                .unwrap()
+        })
+        .tuples()
+        .next()
+        .unwrap()
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
