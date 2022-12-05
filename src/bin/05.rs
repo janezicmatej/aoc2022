@@ -26,23 +26,25 @@ fn parse_towers(text_towers: &str) -> Vec<Vec<char>> {
     towers
 }
 
-pub fn part_one(input: &str) -> Option<String> {
+fn move_crates(input: &str, reverse: bool) -> Option<String> {
     let (text_towers, instructions) = input.split("\n\n").next_tuple().unwrap();
     let mut towers = parse_towers(text_towers);
 
     for line in instructions.trim().split('\n') {
         let captures = RE.captures(line).unwrap();
-
-        let (amount, from, to): (usize, usize, usize) = (
-            captures[1].parse().unwrap(),
-            captures[2].parse().unwrap(),
-            captures[3].parse().unwrap(),
-        );
+        let (amount, from, to): (usize, usize, usize) = (1..=3)
+            .map(|x| captures[x].parse().unwrap())
+            .tuple_windows()
+            .next()
+            .unwrap();
 
         let mut aux = Vec::new();
         for _ in 0..amount {
             let aaux = towers[from - 1].pop().unwrap();
             aux.push(aaux);
+        }
+        if reverse {
+            aux.reverse();
         }
 
         towers[to - 1].append(&mut aux);
@@ -52,32 +54,12 @@ pub fn part_one(input: &str) -> Option<String> {
         towers.iter().map(|x| x.iter().rev().next().unwrap()),
     ))
 }
+
+pub fn part_one(input: &str) -> Option<String> {
+    move_crates(input, false)
+}
 pub fn part_two(input: &str) -> Option<String> {
-    let (text_towers, instructions) = input.split("\n\n").next_tuple().unwrap();
-    let mut towers = parse_towers(text_towers);
-
-    for line in instructions.trim().split('\n') {
-        let captures = RE.captures(line).unwrap();
-
-        let (amount, from, to): (usize, usize, usize) = (
-            captures[1].parse().unwrap(),
-            captures[2].parse().unwrap(),
-            captures[3].parse().unwrap(),
-        );
-
-        let mut aux = Vec::new();
-        for _ in 0..amount {
-            let aaux = towers[from - 1].pop().unwrap();
-            aux.push(aaux);
-        }
-        aux.reverse();
-
-        towers[to - 1].append(&mut aux);
-    }
-
-    Some(String::from_iter(
-        towers.iter().map(|x| x.iter().rev().next().unwrap()),
-    ))
+    move_crates(input, true)
 }
 fn main() {
     let input = &aoc::read_file("inputs", 5);
