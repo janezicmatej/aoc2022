@@ -4,7 +4,6 @@ use regex::Regex;
 
 lazy_static! {
     static ref RE: Regex = Regex::new(r#"move (\d+) from (\d+) to (\d+)"#).unwrap();
-    static ref SKIP: Vec<char> = vec!['[', ' ', ']'];
 }
 
 fn parse_towers(text_towers: &str) -> Vec<Vec<char>> {
@@ -16,9 +15,9 @@ fn parse_towers(text_towers: &str) -> Vec<Vec<char>> {
     }
 
     for row in rows {
-        for (i, c) in row.chars().enumerate() {
-            if !SKIP.contains(&c) {
-                towers[i / 4].push(c);
+        for (i, c) in row.chars().skip(1).step_by(4).enumerate() {
+            if c != ' ' {
+                towers[i].push(c);
             }
         }
     }
