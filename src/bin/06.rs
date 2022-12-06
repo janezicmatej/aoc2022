@@ -2,12 +2,12 @@ use hashbrown::HashSet;
 
 fn marker_length(input: &str, length: usize) -> Option<u32> {
     let mut set = HashSet::with_capacity(length + 1);
-    for i in 0..input.len() {
-        set.extend(input[i..].chars().take(length));
+    for i in 0..input.len() - length {
+        set.clear();
+        set.extend(input[i..i + length].chars());
         if set.len() == length {
             return Some(i as u32 + length as u32);
         }
-        set.clear();
     }
     unreachable!()
 }
