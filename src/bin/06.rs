@@ -9,7 +9,7 @@ fn marker_length(input: &str, length: usize) -> Option<u32> {
             return Some(i as u32 + length as u32);
         }
     }
-    unreachable!()
+    None
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
