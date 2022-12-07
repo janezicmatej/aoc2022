@@ -44,7 +44,7 @@ macro_rules! solve {
 pub fn read_file(folder: &str, day: u8) -> String {
     let cwd = env::current_dir().unwrap();
 
-    let filepath = cwd.join("src").join(folder).join(format!("{:02}.txt", day));
+    let filepath = cwd.join("src").join(folder).join(format!("{day:02}.txt"));
 
     let f = fs::read_to_string(filepath);
     f.expect("could not open input file")
@@ -104,8 +104,7 @@ mod tests {
     fn test_parse_exec_time() {
         assert_approx_eq!(
             parse_exec_time(&format!(
-                "🎄 Part 1 🎄\n0 (elapsed: 74.13ns){}\n🎄 Part 2 🎄\n0 (elapsed: 50.00ns){}",
-                ANSI_RESET, ANSI_RESET
+                "🎄 Part 1 🎄\n0 (elapsed: 74.13ns){ANSI_RESET}\n🎄 Part 2 🎄\n0 (elapsed: 50.00ns){ANSI_RESET}"
             )),
             0_f64
         );
