@@ -1,72 +1,57 @@
-use std::ops::Not;
-
 use hashbrown::HashMap;
 use itertools::Itertools;
 
-#[derive(Debug)]
-struct File {
-    size: u32,
-}
-
-#[derive(Debug)]
+#[derive(Debug, Default)]
 struct Dir {
     dirs: HashMap<String, Dir>,
-    files: Vec<File>,
+    file_size: u32,
+    size: Option<u32>,
 }
 
 impl Dir {
-    fn update_from(&mut self, other: Dir) {
-        self.files = other.files;
+    pub fn is_empty(&self) -> bool {
+        self.dirs.is_empty() && self.file_size == 0 && self.size.is_none()
     }
 
-    fn insert_rec(&mut self, mut stack: Vec<String>, current: &String, dir: Dir) {
+    fn insert_rec(&mut self, mut stack: Vec<String>, dir: Dir) {
+        let next_name = stack.pop().unwrap();
         if !stack.is_empty() {
-            let top = stack.pop().unwrap();
-            if self.dirs.contains_key(&top).not() {
-                self.dirs.insert(
-                    top.to_string(),
-                    Dir {
-                        dirs: HashMap::new(),
-                        files: Vec::new(),
-                    },
-                );
-            }
-
             self.dirs
-                .get_mut(&top)
-                .unwrap()
-                .insert_rec(stack, current, dir);
+                .entry(next_name)
+                .or_default()
+                .insert_rec(stack, dir);
         } else {
-            if self.dirs.contains_key(&current.to_string()).not() {
-                self.dirs.insert(
-                    current.to_string(),
-                    Dir {
-                        dirs: HashMap::new(),
-                        files: Vec::new(),
-                    },
-                );
-            }
-
-            self.dirs.get_mut(current).unwrap().update_from(dir);
+            self.dirs.entry(next_name).or_default().file_size = dir.file_size;
         }
     }
-    fn rec_sum_full(&self) -> u32 {
-        let files_size: u32 = self.files.iter().map(|x| x.size).sum();
-        let dir_size: u32 = self.dirs.values().map(Dir::rec_sum_full).sum();
-        dir_size + files_size
+
+    fn calc_size(&mut self) -> Option<u32> {
+        if self.size.is_none() {
+            let dir_size: u32 = self
+                .dirs
+                .values_mut()
+                .map(Dir::calc_size)
+                .map(Option::unwrap)
+                .sum();
+            let total_size = dir_size + self.file_size;
+            self.size = Some(total_size);
+        }
+        self.size
     }
 
-    fn rec_sum(&self) -> u32 {
-        let rc = self.dirs.values().map(Dir::rec_sum).sum();
-        if self.rec_sum_full() < 100000 {
-            self.rec_sum_full() + rc
+    fn sum_lt(&self, constraint: u32) -> u32 {
+        let recur = self.dirs.values().map(|x| x.sum_lt(constraint));
+        let rc = recur.sum();
+
+        if self.size.unwrap() < constraint {
+            self.size.unwrap() + rc
         } else {
             rc
         }
     }
 
     fn find_smallest_gt(&self, size: u32) -> u32 {
-        let rcf = self.rec_sum_full();
+        let rcf = self.size.unwrap();
         if rcf < size {
             return rcf;
         }
@@ -85,67 +70,65 @@ fn parse_root(input: &str) -> Dir {
     let mut current_dir = "/".to_string();
     let mut root = Dir {
         dirs: HashMap::new(),
-        files: Vec::new(),
+        file_size: 0,
+        size: None,
     };
 
-    let mut lines = input.lines().skip(1).peekable();
+    let mut ls_stack = Dir {
+        dirs: HashMap::new(),
+        file_size: 0,
+        size: None,
+    };
 
-    while let Some(x) = lines.next() {
-        if let '$' = x.chars().next().unwrap() {
-            let split = x[2..].split(' ');
-            if let "cd" = split.clone().next().unwrap() {
-                match split.last().unwrap() {
-                    ".." => current_dir = dir_stack.pop().unwrap(),
+    for split in input.lines().map(|x| x.split_whitespace().collect_vec()) {
+        match split.first().unwrap() {
+            &"$" => {
+                if !ls_stack.is_empty() {
+                    let mut rev_stack = dir_stack.to_vec();
+                    rev_stack.push(current_dir.to_string());
+                    rev_stack.reverse();
+                    root.insert_rec(rev_stack, ls_stack);
+                    ls_stack = Dir::default();
+                }
+                match *split.last().unwrap() {
                     "/" => {
-                        current_dir = "/".to_string();
                         dir_stack.clear();
+                        current_dir = "/".to_string();
                     }
+                    ".." => current_dir = dir_stack.pop().unwrap(),
+                    "ls" => (),
                     x => {
                         dir_stack.push(current_dir);
                         current_dir = x.to_string();
                     }
                 }
-            } else {
-                let mut dirs = HashMap::new();
-                let mut files = Vec::new();
-                while let Some(y) = lines.peek() {
-                    if let '$' = y.chars().next().unwrap() {
-                        break;
-                    } else {
-                        match lines.next().unwrap().split(' ').next_tuple().unwrap() {
-                            ("dir", name) => {
-                                dirs.insert(
-                                    name.to_string(),
-                                    Dir {
-                                        dirs: HashMap::new(),
-                                        files: Vec::new(),
-                                    },
-                                );
-                            }
-                            (size, _name) => {
-                                let parsed_size = size.parse().unwrap();
-                                files.push(File { size: parsed_size })
-                            }
-                        }
-                    }
-                }
-                let mut rev_stack = dir_stack.to_vec();
-                rev_stack.reverse();
-                root.insert_rec(rev_stack, &current_dir, Dir { dirs, files });
             }
-        }
+            _ => match split.iter().tuple_windows().next().unwrap() {
+                (&"dir", x) => drop(ls_stack.dirs.insert(x.to_string(), Dir::default())),
+                (size, _) => ls_stack.file_size += size.parse::<u32>().unwrap(),
+            },
+        };
     }
+    // drain ls_stack
+    let mut rev_stack = dir_stack.to_vec();
+    rev_stack.push(current_dir);
+    rev_stack.reverse();
+    root.insert_rec(rev_stack, ls_stack);
 
     root
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    Some(parse_root(input).rec_sum())
+    let mut root = parse_root(input);
+    root.calc_size();
+    Some(root.sum_lt(100000))
 }
 
 pub fn part_two(input: &str) -> Option<u32> {
-    let root = parse_root(input);
-    Some(root.find_smallest_gt(root.rec_sum_full() - 40000000))
+    let mut root = parse_root(input);
+    root.calc_size();
+    let size = root.size.unwrap() - 40000000;
+    Some(root.find_smallest_gt(size))
 }
 fn main() {
     let input = &aoc::read_file("inputs", 7);
