@@ -33,18 +33,19 @@ fn parse_input(input: &str) -> Vec<Move> {
 }
 
 fn move_tail(tail: &mut [i32; 2], prev: &[i32; 2]) {
-    let x = match prev[0] - tail[0] {
-        0 => 0,
-        _ => (prev[0] - tail[0]) / (prev[0] - tail[0]).abs(),
-    };
-    let y = match prev[1] - tail[1] {
-        0 => 0,
-        _ => (prev[1] - tail[1]) / (prev[1] - tail[1]).abs(),
-    };
+    let normalized = tail
+        .iter()
+        .zip(prev.iter())
+        .map(|(t, p)| match t - p {
+            0 => 0,
+            _ => (p - t) / (t - p).abs(),
+        })
+        .collect_vec();
 
-    if !((tail[0] + x == prev[0] && tail[1] + y == prev[1]) || tail == prev) {
-        tail[0] += x;
-        tail[1] += y;
+    if tail.iter().zip(prev.iter()).any(|(t, p)| (t - p).abs() > 1) {
+        for (t, z) in tail.iter_mut().zip(normalized) {
+            *t += z
+        }
     }
 }
 
