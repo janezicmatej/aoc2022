@@ -1,9 +1,8 @@
 use itertools::Itertools;
-use std::collections::VecDeque;
 
 #[derive(Debug)]
 struct Monkey {
-    items: VecDeque<i64>,
+    items: Vec<i64>,
     operation: String,
     test: i64,
     next: (usize, usize),
@@ -42,7 +41,7 @@ impl From<&str> for Monkey {
 
 fn monkey_rounds(input: &str, rounds: usize, stress_relief: bool) -> Option<i64> {
     let mut monkeys = input.split("\n\n").map(Monkey::from).collect_vec();
-    let mut new_items = vec![VecDeque::new(); monkeys.len()];
+    let mut new_items = vec![Vec::new(); monkeys.len()];
     let constraint: i64 = monkeys.iter().fold(1, |acc, x| acc * x.test);
 
     for _ in 0..rounds {
@@ -73,9 +72,9 @@ fn monkey_rounds(input: &str, rounds: usize, stress_relief: bool) -> Option<i64>
                 new %= constraint;
                 monke.inspections += 1;
                 if new % monke.test == 0 {
-                    new_items[monke.next.0].push_back(new);
+                    new_items[monke.next.0].push(new);
                 } else {
-                    new_items[monke.next.1].push_back(new);
+                    new_items[monke.next.1].push(new);
                 }
             }
         }
