@@ -1,19 +1,19 @@
+use itertools::Itertools;
 use std::{
     cmp::Ordering,
     iter::{from_fn, once},
 };
+use Packet::*;
 
-use Nested::*;
-
-#[derive(Debug, Eq, PartialEq, Clone)]
-enum Nested {
+#[derive(Eq, Debug, Clone)]
+enum Packet {
     Literal(u32),
-    List(Vec<Nested>),
+    List(Vec<Packet>),
 }
 
-impl From<&str> for Nested {
+impl From<&str> for Packet {
     fn from(value: &str) -> Self {
-        let mut stack: Vec<Vec<Nested>> = Vec::new();
+        let mut stack: Vec<Vec<Packet>> = Vec::new();
         let mut chars = value.chars();
         let mut buf = None;
         while let Some(c) = buf.take().or_else(|| chars.next()) {
@@ -44,13 +44,19 @@ impl From<&str> for Nested {
         unreachable!()
     }
 }
-impl PartialOrd for Nested {
+impl PartialOrd for Packet {
     fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
         Some(self.cmp(other))
     }
 }
 
-impl Ord for Nested {
+impl PartialEq for Packet {
+    fn eq(&self, other: &Self) -> bool {
+        matches!(self.cmp(other), Ordering::Equal)
+    }
+}
+
+impl Ord for Packet {
     fn cmp(&self, other: &Self) -> Ordering {
         match (self, other) {
             (Literal(x), Literal(y)) => x.cmp(y),
@@ -70,33 +76,26 @@ impl Ord for Nested {
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let mut count = 0;
-    for (idx, (a, b)) in input
-        .split("\n\n")
-        .map(|x| x.split_once('\n').unwrap())
-        .enumerate()
-    {
-        let parsed_a = Nested::from(a);
-        let parsed_b = Nested::from(b);
-
-        if parsed_a < parsed_b {
-            count += 1 + idx as u32;
-        }
-    }
-    Some(count)
+    Some(
+        input
+            .split("\n\n")
+            .map(|x| x.split_once('\n').unwrap())
+            .map(|(a, b)| Packet::from(a) < Packet::from(b))
+            .enumerate()
+            .filter(|(_, x)| *x)
+            .map(|(x, _)| x as u32 + 1)
+            .sum(),
+    )
 }
 pub fn part_two(input: &str) -> Option<u32> {
-    let mut all = Vec::new();
     let div_a = List(vec![List(vec![Literal(2)])]);
     let div_b = List(vec![List(vec![Literal(6)])]);
-    all.push(div_a.clone());
-    all.push(div_b.clone());
-    for (a, b) in input.split("\n\n").map(|x| x.split_once('\n').unwrap()) {
-        let parsed_a = Nested::from(a);
-        let parsed_b = Nested::from(b);
-        all.push(parsed_a);
-        all.push(parsed_b);
-    }
+    let mut all = input
+        .split('\n')
+        .filter(|x| x != &"")
+        .map(Packet::from)
+        .collect_vec();
+    all.append(&mut vec![div_a.clone(), div_b.clone()]);
     all.sort();
 
     Some(
@@ -121,5 +120,11 @@ mod tests {
     fn test_part_two() {
         let input = aoc::read_file("test_inputs", 13);
         assert_eq!(part_two(&input), Some(140));
+    }
+    #[test]
+    fn test_ordering() {
+        assert_eq!(Packet::from("[1,2,3,[1,2]]"), Packet::from("[1,2,3,[1,2]]"));
+        assert!(Packet::from("[1,2,3,[1,2]]") < Packet::from("[1,2,3,[1,2,3]]"));
+        assert!(Packet::from("[1,2,3,[1,[[2]]]]") == Packet::from("[1,2,3,[1,[2]]]"));
     }
 }
