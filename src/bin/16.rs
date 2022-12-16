@@ -16,34 +16,41 @@ struct Valve {
 }
 
 trait BitMask {
-    // bitwise or
+    // bitwise or on n-th bit
     fn or(&self, n: u32) -> Self;
 
-    // bitwise and
+    // bitwise and with n-th bit
     fn and(&self, n: u32) -> Self;
 
+    // check if bit n is on
     fn contains(&self, n: u32) -> bool;
 
+    // max flow for part 2 optimization
     fn max_flow(mask_len: u32) -> Self;
 }
 
-type Mask = u64;
+// type alias for integer, where bit n represents valve opened valve n u16, u32 and u64 perform
+// with same speed while u128 takes around 2x longer (u8 doesn't have enough bits for all valves
+// with flow > 0)
+type Mask = u32;
 
+// interestingly rust compiler does not optimize 2.pow(n) as (1 << n) and (1 << n) gains
+// significant performance compared to 2.pow(n). (around 33%)
 impl BitMask for Mask {
     fn or(&self, n: u32) -> Self {
-        self | (2 as Mask).pow(n)
+        self | (1 << n)
     }
 
     fn and(&self, n: u32) -> Self {
-        self & (2 as Mask).pow(n)
+        self & (1 << n)
     }
 
     fn contains(&self, n: u32) -> bool {
-        self.and(n) == 0.or(n)
+        self & (1 << n) != 0
     }
 
     fn max_flow(mask_len: u32) -> Self {
-        (0..mask_len).map(|x| (2 as Mask).pow(x)).sum()
+        (0..mask_len).map(|x| (1 << x)).sum()
     }
 }
 
@@ -52,10 +59,10 @@ fn parse_graph(input: &str) -> (HashMap<u32, Valve>, (u32, u32)) {
     let mut counter_flow = 0;
     let mut counter_other = Mask::BITS;
 
-    let mut map = HashMap::new();
+    let mut graph = HashMap::new();
 
-    // 2 passes, get all that have any flow and unber them with 0 - 15 (there is less then 16
-    // in my input so i can use u16 bitmask)
+    // first passthrough to rename vertices from strings to ints and sort them 0..Mask::BITS for
+    // those with flow > 0 and Mask::BITS.. for others
     for line in input.lines() {
         let cap = RE.captures(line).unwrap();
         let from = cap[1].to_string();
@@ -70,6 +77,7 @@ fn parse_graph(input: &str) -> (HashMap<u32, Valve>, (u32, u32)) {
         }
     }
 
+    // second passthrough to generate graph as HashMap<u32, Valve>
     for line in input.lines() {
         let cap = RE.captures(line).unwrap();
         let from = cap[1].to_string();
@@ -79,22 +87,26 @@ fn parse_graph(input: &str) -> (HashMap<u32, Valve>, (u32, u32)) {
             .map(|x| *inner.get(x).unwrap())
             .collect_vec();
 
-        map.insert(*inner.get(&from).unwrap(), Valve { flow, to });
+        graph.insert(*inner.get(&from).unwrap(), Valve { flow, to });
     }
 
-    (map, (*inner.get("AA").unwrap(), counter_flow - 1))
+    (graph, (*inner.get("AA").unwrap(), counter_flow - 1))
 }
 
-fn get_flow(mask: Mask, mask_len: u32, map: &HashMap<u32, Valve>) -> u32 {
+// calculate flow for mask on current graph, mask_len is important as stoping iteration as soon as
+// possible reduces time significantly
+fn get_flow(mask: Mask, mask_len: u32, graph: &HashMap<u32, Valve>) -> u32 {
     (0..=mask_len)
         .filter(|x| mask.contains(*x))
-        .filter_map(|x| map.get(&x))
+        .filter_map(|x| graph.get(&x))
         .map(|x| x.flow)
-        .sum::<u32>()
+        .sum()
 }
 
+// smart dfs with memoization where we open valve if not opened then try moving in all direction
+// and let memoization take care of stoping a dfs branch early
 pub fn part_one(input: &str) -> Option<u32> {
-    let (map, (start, mask_len)) = parse_graph(input);
+    let (graph, (start, mask_len)) = parse_graph(input);
 
     let mut queue = vec![(1, start, 0, 0)];
     let mut memo = HashMap::new();
@@ -116,25 +128,29 @@ pub fn part_one(input: &str) -> Option<u32> {
             continue;
         }
 
-        // open here
-        if map.get(&me).unwrap().flow > 0 && !mask.contains(me) {
+        // we open
+        if graph.get(&me).unwrap().flow > 0 && !mask.contains(me) {
             let new_mask = mask.or(me);
-            let new_score = score + get_flow(new_mask, mask_len, &map);
+            let new_score = score + get_flow(new_mask, mask_len, &graph);
 
             queue.push((time + 1, me, new_score, new_mask));
         }
 
-        // neighbours
-        for n in map.get(&me).unwrap().to.iter() {
-            let new_score = score + get_flow(mask, mask_len, &map);
+        // we move
+        for n in graph.get(&me).unwrap().to.iter() {
+            let new_score = score + get_flow(mask, mask_len, &graph);
             queue.push((time + 1, *n, new_score, mask));
         }
     }
 
     Some(best)
 }
+
+// smart dfs with memoization where we take care of all 4 possibilities that can occur (we can open
+// the valve or move and elephant can open the valve or move 2x2 = 4). We let memoization take care
+// of stoping early like before
 pub fn part_two(input: &str) -> Option<u32> {
-    let (map, (start, mask_len)) = parse_graph(input);
+    let (graph, (start, mask_len)) = parse_graph(input);
 
     let mut queue = vec![(1, start, start, 0, 0)];
     let mut memo = HashMap::new();
@@ -158,46 +174,52 @@ pub fn part_two(input: &str) -> Option<u32> {
             continue;
         }
 
-        let increase = get_flow(mask, mask_len, &map);
-
+        // some extra optimization as all valves will be open in some cases
         if max_flow == mask {
             let mut new_score = score;
             let mut timer = time;
+            let increase = get_flow(mask, mask_len, &graph);
 
             while timer < 26 {
                 new_score += increase;
                 timer += 1;
             }
-            queue.push((timer + 1, me, you, new_score, mask));
+            queue.push((timer, me, you, new_score, mask));
         }
 
-        if map.get(&me).unwrap().flow > 0 && !mask.contains(me) {
+        // we open
+        if graph.get(&me).unwrap().flow > 0 && !mask.contains(me) {
             let new_mask = mask.or(me);
 
-            if map.get(&you).unwrap().flow > 0 && !mask.contains(you) {
+            // elephant opens
+            if graph.get(&you).unwrap().flow > 0 && !mask.contains(you) {
                 let new_mask = new_mask.or(you);
-                let new_score = score + get_flow(new_mask, mask_len, &map);
+                let new_score = score + get_flow(new_mask, mask_len, &graph);
 
                 queue.push((time + 1, me, you, new_score, new_mask));
             }
 
-            for n in map.get(&you).unwrap().to.iter() {
-                let new_score = score + get_flow(new_mask, mask_len, &map);
+            // elephant goes
+            for n in graph.get(&you).unwrap().to.iter() {
+                let new_score = score + get_flow(new_mask, mask_len, &graph);
 
                 queue.push((time + 1, me, *n, new_score, new_mask));
             }
         }
 
-        for n in map.get(&me).unwrap().to.iter() {
-            if map.get(&you).unwrap().flow > 0 && !mask.contains(you) {
+        // we go
+        for n in graph.get(&me).unwrap().to.iter() {
+            // elephant opens
+            if graph.get(&you).unwrap().flow > 0 && !mask.contains(you) {
                 let new_mask = mask.or(you);
-                let new_score = score + get_flow(new_mask, mask_len, &map);
+                let new_score = score + get_flow(new_mask, mask_len, &graph);
 
                 queue.push((time + 1, *n, you, new_score, new_mask));
             }
 
-            for m in map.get(&you).unwrap().to.iter() {
-                let new_score = score + get_flow(mask, mask_len, &map);
+            // elephant goes
+            for m in graph.get(&you).unwrap().to.iter() {
+                let new_score = score + get_flow(mask, mask_len, &graph);
 
                 queue.push((time + 1, *n, *m, new_score, mask));
             }
@@ -207,6 +229,7 @@ pub fn part_two(input: &str) -> Option<u32> {
     Some(best)
 }
 fn main() {
+    // further optimization ideas would be to analize graph and compress it as much as possible
     let input = &aoc::read_file("inputs", 16);
     aoc::solve!(1, part_one, input);
     aoc::solve!(2, part_two, input);
