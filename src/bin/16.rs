@@ -15,10 +15,42 @@ struct Valve {
     to: Vec<u32>,
 }
 
+trait BitMask {
+    // bitwise or
+    fn or(&self, n: u32) -> Self;
+
+    // bitwise and
+    fn and(&self, n: u32) -> Self;
+
+    fn contains(&self, n: u32) -> bool;
+
+    fn max_flow(mask_len: u32) -> Self;
+}
+
+type Mask = u64;
+
+impl BitMask for Mask {
+    fn or(&self, n: u32) -> Self {
+        self | (2 as Mask).pow(n)
+    }
+
+    fn and(&self, n: u32) -> Self {
+        self & (2 as Mask).pow(n)
+    }
+
+    fn contains(&self, n: u32) -> bool {
+        self.and(n) == 0.or(n)
+    }
+
+    fn max_flow(mask_len: u32) -> Self {
+        (0..mask_len).map(|x| (2 as Mask).pow(x)).sum()
+    }
+}
+
 fn parse_graph(input: &str) -> (HashMap<u32, Valve>, (u32, u32)) {
     let mut inner = HashMap::new();
     let mut counter_flow = 0;
-    let mut counter_other = 32;
+    let mut counter_other = Mask::BITS;
 
     let mut map = HashMap::new();
 
@@ -50,26 +82,34 @@ fn parse_graph(input: &str) -> (HashMap<u32, Valve>, (u32, u32)) {
         map.insert(*inner.get(&from).unwrap(), Valve { flow, to });
     }
 
-    (map, (*inner.get("AA").unwrap(), counter_flow))
+    (map, (*inner.get("AA").unwrap(), counter_flow - 1))
+}
+
+fn get_flow(mask: Mask, mask_len: u32, map: &HashMap<u32, Valve>) -> u32 {
+    (0..=mask_len)
+        .filter(|x| mask.contains(*x))
+        .filter_map(|x| map.get(&x))
+        .map(|x| x.flow)
+        .sum::<u32>()
 }
 
 pub fn part_one(input: &str) -> Option<u32> {
-    let (map, (start, mlen)) = parse_graph(input);
+    let (map, (start, mask_len)) = parse_graph(input);
 
-    let mut queue: Vec<(u32, u32, u32, u32)> = vec![(1, start, 0, 0)];
-    let mut memo: HashMap<(u32, u32), u32> = HashMap::new();
+    let mut queue = vec![(1, start, 0, 0)];
+    let mut memo = HashMap::new();
     let mut best = 0;
 
     while !queue.is_empty() {
-        let (time, location, score, opened_mask) = queue.pop().unwrap();
+        let (time, me, score, mask) = queue.pop().unwrap();
 
-        if let Some(x) = memo.get(&(time, location)) {
+        if let Some(x) = memo.get(&(time, me)) {
             if x >= &score {
                 continue;
             }
         }
 
-        memo.insert((time, location), score);
+        memo.insert((time, me), score);
 
         if time == 30 {
             best = max(best, score);
@@ -77,65 +117,50 @@ pub fn part_one(input: &str) -> Option<u32> {
         }
 
         // open here
-        if map.get(&location).unwrap().flow > 0 && 2_u32.pow(location) & opened_mask == 0 {
-            let next_mask = opened_mask | 2_u32.pow(location);
-            // println!("{}\n{}", opened_mask, next_mask);
-            let next_score = score
-                + (0..mlen)
-                    .filter(|x| 2_u32.pow(*x) & next_mask == 2_u32.pow(*x))
-                    .map(|x| map.get(&x).unwrap().flow)
-                    .sum::<u32>();
-            queue.push((time + 1, location, next_score, next_mask));
+        if map.get(&me).unwrap().flow > 0 && !mask.contains(me) {
+            let new_mask = mask.or(me);
+            let new_score = score + get_flow(new_mask, mask_len, &map);
+
+            queue.push((time + 1, me, new_score, new_mask));
         }
 
         // neighbours
-        for n in map.get(&location).unwrap().to.iter() {
-            let next_score = score
-                + (0..mlen)
-                    .filter(|x| 2_u32.pow(*x) & opened_mask == 2_u32.pow(*x))
-                    .map(|x| map.get(&x).unwrap().flow)
-                    .sum::<u32>();
-            queue.push((time + 1, *n, next_score, opened_mask));
+        for n in map.get(&me).unwrap().to.iter() {
+            let new_score = score + get_flow(mask, mask_len, &map);
+            queue.push((time + 1, *n, new_score, mask));
         }
     }
 
     Some(best)
 }
 pub fn part_two(input: &str) -> Option<u32> {
-    let (map, (start, mlen)) = parse_graph(input);
+    let (map, (start, mask_len)) = parse_graph(input);
 
-    let mut queue: Vec<(u32, u32, u32, u32, u32)> = vec![(1, start, start, 0, 0)];
-    let mut memo: HashMap<(u32, u32, u32), u32> = HashMap::new();
+    let mut queue = vec![(1, start, start, 0, 0)];
+    let mut memo = HashMap::new();
     let mut best = 0;
 
-    let max_flow: u32 = (0..mlen)
-        .filter_map(|x| map.get(&(x as u32)))
-        .map(|x| 2_u32.pow(x.flow as u32))
-        .sum();
+    let max_flow = Mask::max_flow(mask_len);
 
     while !queue.is_empty() {
-        let (time, lm, le, score, opened_mask) = queue.pop().unwrap();
+        let (time, me, you, score, mask) = queue.pop().unwrap();
 
-        if let Some(x) = memo.get(&(time, lm, le)) {
+        if let Some(x) = memo.get(&(time, me, you)) {
             if x >= &score {
                 continue;
             }
         }
 
-        memo.insert((time, lm, le), score);
+        memo.insert((time, me, you), score);
 
         if time == 26 {
             best = max(best, score);
             continue;
         }
-        let increase = (0..mlen)
-            .filter(|x| 2_u32.pow(*x) & opened_mask == 2_u32.pow(*x))
-            .map(|x| map.get(&(x as u32)).unwrap().flow)
-            .sum::<u32>();
 
-        // some optimization
-        if max_flow == opened_mask {
-            // everything is open, increase time and score only
+        let increase = get_flow(mask, mask_len, &map);
+
+        if max_flow == mask {
             let mut new_score = score;
             let mut timer = time;
 
@@ -143,56 +168,38 @@ pub fn part_two(input: &str) -> Option<u32> {
                 new_score += increase;
                 timer += 1;
             }
-            queue.push((timer + 1, lm, le, new_score, opened_mask));
+            queue.push((timer + 1, me, you, new_score, mask));
         }
 
-        // i open
-        if map.get(&lm).unwrap().flow > 0 && 2_u32.pow(lm) & opened_mask == 0 {
-            let next_mask = opened_mask | 2_u32.pow(lm);
+        if map.get(&me).unwrap().flow > 0 && !mask.contains(me) {
+            let new_mask = mask.or(me);
 
-            // elephant also opens
-            if map.get(&le).unwrap().flow > 0 && 2_u32.pow(le) & next_mask == 0 {
-                let next_mask = next_mask | 2_u32.pow(le);
-                let next_score = score
-                    + (0..mlen)
-                        .filter(|x| 2_u32.pow(*x) & next_mask == 2_u32.pow(*x))
-                        .map(|x| map.get(&x).unwrap().flow)
-                        .sum::<u32>();
-                queue.push((time + 1, lm, le, next_score, next_mask));
+            if map.get(&you).unwrap().flow > 0 && !mask.contains(you) {
+                let new_mask = new_mask.or(you);
+                let new_score = score + get_flow(new_mask, mask_len, &map);
+
+                queue.push((time + 1, me, you, new_score, new_mask));
             }
 
-            // elephant goes
-            for n in map.get(&le).unwrap().to.iter() {
-                let next_score = score
-                    + (0..mlen)
-                        .filter(|x| 2_u32.pow(*x) & next_mask == 2_u32.pow(*x))
-                        .map(|x| map.get(&x).unwrap().flow)
-                        .sum::<u32>();
-                queue.push((time + 1, lm, *n, next_score, next_mask));
+            for n in map.get(&you).unwrap().to.iter() {
+                let new_score = score + get_flow(new_mask, mask_len, &map);
+
+                queue.push((time + 1, me, *n, new_score, new_mask));
             }
         }
 
-        // i go
-        for n in map.get(&lm).unwrap().to.iter() {
-            // elephant opens
-            if map.get(&le).unwrap().flow > 0 && 2_u32.pow(le) & opened_mask == 0 {
-                let next_mask = opened_mask | 2_u32.pow(le);
-                let next_score = score
-                    + (0..mlen)
-                        .filter(|x| 2_u32.pow(*x) & next_mask == 2_u32.pow(*x))
-                        .map(|x| map.get(&x).unwrap().flow)
-                        .sum::<u32>();
-                queue.push((time + 1, *n, le, next_score, next_mask));
+        for n in map.get(&me).unwrap().to.iter() {
+            if map.get(&you).unwrap().flow > 0 && !mask.contains(you) {
+                let new_mask = mask.or(you);
+                let new_score = score + get_flow(new_mask, mask_len, &map);
+
+                queue.push((time + 1, *n, you, new_score, new_mask));
             }
 
-            // elephant goes
-            for m in map.get(&le).unwrap().to.iter() {
-                let next_score = score
-                    + (0..mlen)
-                        .filter(|x| 2_u32.pow(*x) & opened_mask == 2_u32.pow(*x))
-                        .map(|x| map.get(&x).unwrap().flow)
-                        .sum::<u32>();
-                queue.push((time + 1, *n, *m, next_score, opened_mask));
+            for m in map.get(&you).unwrap().to.iter() {
+                let new_score = score + get_flow(mask, mask_len, &map);
+
+                queue.push((time + 1, *n, *m, new_score, mask));
             }
         }
     }
