@@ -1,4 +1,5 @@
 use aoc::helpers::to_vec_vec;
+use aoc::{max, min};
 use hashbrown::HashSet;
 use itertools::any;
 
@@ -35,8 +36,8 @@ pub fn part_two(input: &str) -> Option<isize> {
     let mut dfs_max: isize = isize::min_value();
 
     for [x, y, z] in cubes.iter() {
-        dfs_min = **vec![&dfs_min, x, y, z].iter().min()?;
-        dfs_max = **vec![&dfs_max, x, y, z].iter().max()?;
+        dfs_min = *min! { &dfs_min, x, y, z };
+        dfs_max = *max! { &dfs_max, x, y, z };
     }
 
     dfs_min -= 1;
