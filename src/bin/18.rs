@@ -36,8 +36,8 @@ pub fn part_two(input: &str) -> Option<isize> {
     let mut dfs_max: isize = isize::min_value();
 
     for [x, y, z] in cubes.iter() {
-        dfs_min = *min! { &dfs_min, x, y, z };
-        dfs_max = *max! { &dfs_max, x, y, z };
+        dfs_min = *min!(&dfs_min, x, y, z);
+        dfs_max = *max!(&dfs_max, x, y, z);
     }
 
     dfs_min -= 1;
@@ -95,11 +95,11 @@ mod tests {
     #[test]
     fn test_part_one() {
         let input = aoc::read_file("test_inputs", 18);
-        assert_eq!(part_one(&input), None);
+        assert_eq!(part_one(&input), Some(64));
     }
     #[test]
     fn test_part_two() {
         let input = aoc::read_file("test_inputs", 18);
-        assert_eq!(part_two(&input), None);
+        assert_eq!(part_two(&input), Some(58));
     }
 }
