@@ -23,7 +23,7 @@ impl From<&str> for Packet {
                     let literal = once(c)
                         .chain(from_fn(|| {
                             buf = chars.next();
-                            buf.filter(|cc| ('0'..='9').contains(cc))
+                            buf.filter(|cc| cc.is_ascii_digit())
                         }))
                         .collect::<String>()
                         .parse()
