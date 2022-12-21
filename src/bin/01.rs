@@ -1,10 +1,11 @@
+use elves::parsers::vec_lines;
 use itertools::Itertools;
 pub fn part_one(input: &str) -> Option<u32> {
     Some(
         input
             .trim()
             .split("\n\n")
-            .map(|x| to_vec(x, '\n').iter().sum())
+            .map(|x| vec_lines(x).iter().sum())
             .max()
             .unwrap(),
     )
@@ -14,7 +15,7 @@ pub fn part_two(input: &str) -> Option<u32> {
         input
             .trim()
             .split("\n\n")
-            .map(|x| to_vec(x, '\n').iter().sum::<u32>())
+            .map(|x| vec_lines(x).iter().sum::<u32>())
             .sorted_by(|a, b| b.cmp(a))
             .take(3)
             .sum(),

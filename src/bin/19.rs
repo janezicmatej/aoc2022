@@ -1,4 +1,4 @@
-use aoc::{max, min};
+use elves::{many_max, many_min};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 use regex::Regex;
@@ -47,7 +47,7 @@ struct State {
 
 impl State {
     fn simulate(&self, steps: u32, max_time: u32) -> Self {
-        let time = min!(max_time - self.time, steps);
+        let time = many_min!(max_time - self.time, steps);
         Self {
             time: self.time + time,
             ores: Ores {
@@ -88,7 +88,7 @@ fn simulate(blueprint: &Blueprint, max_time: u32) -> u32 {
 
         // check if time has run out
         if state.time >= max_time {
-            best = max!(best, state.ores.geo);
+            best = many_max!(best, state.ores.geo);
             continue;
         }
 
@@ -105,7 +105,7 @@ fn simulate(blueprint: &Blueprint, max_time: u32) -> u32 {
 
         // create ore robot
         if state.robs.ore > 0 {
-            let needed = max!(0, blueprint.ore as i32 - state.ores.ore as i32) as u32;
+            let needed = many_max!(0, blueprint.ore as i32 - state.ores.ore as i32) as u32;
             let wait = (needed as f64 / state.robs.ore as f64).ceil() as u32 + 1;
             let mut new_state = state.clone().simulate(wait, max_time);
             if blueprint.ore <= new_state.ores.ore {
@@ -117,7 +117,7 @@ fn simulate(blueprint: &Blueprint, max_time: u32) -> u32 {
 
         // create clay robot
         if state.robs.ore > 0 {
-            let needed = max!(0, blueprint.cly as i32 - state.ores.ore as i32) as u32;
+            let needed = many_max!(0, blueprint.cly as i32 - state.ores.ore as i32) as u32;
             let wait = (needed as f64 / state.robs.ore as f64).ceil() as u32 + 1;
             let mut new_state = state.clone().simulate(wait, max_time);
             if blueprint.cly <= new_state.ores.ore {
@@ -129,9 +129,9 @@ fn simulate(blueprint: &Blueprint, max_time: u32) -> u32 {
 
         // create obsidian robot
         if state.robs.ore > 0 && state.robs.cly > 0 {
-            let n_ore = max!(0, blueprint.obs.0 as i32 - state.ores.ore as i32) as u32;
-            let n_cly = max!(0, blueprint.obs.1 as i32 - state.ores.cly as i32) as u32;
-            let wait = max!(
+            let n_ore = many_max!(0, blueprint.obs.0 as i32 - state.ores.ore as i32) as u32;
+            let n_cly = many_max!(0, blueprint.obs.1 as i32 - state.ores.cly as i32) as u32;
+            let wait = many_max!(
                 1,
                 (n_ore as f64 / state.robs.ore as f64).ceil() as u32 + 1,
                 (n_cly as f64 / state.robs.cly as f64).ceil() as u32 + 1
@@ -147,9 +147,9 @@ fn simulate(blueprint: &Blueprint, max_time: u32) -> u32 {
 
         // create geode robot
         if state.robs.ore > 0 && state.robs.obs > 0 {
-            let n_ore = max!(0, blueprint.geo.0 as i32 - state.ores.ore as i32) as u32;
-            let n_obs = max!(0, blueprint.geo.1 as i32 - state.ores.obs as i32) as u32;
-            let wait = max!(
+            let n_ore = many_max!(0, blueprint.geo.0 as i32 - state.ores.ore as i32) as u32;
+            let n_obs = many_max!(0, blueprint.geo.1 as i32 - state.ores.obs as i32) as u32;
+            let wait = many_max!(
                 1,
                 (n_ore as f64 / state.robs.ore as f64).ceil() as u32 + 1,
                 (n_obs as f64 / state.robs.obs as f64).ceil() as u32 + 1
@@ -159,7 +159,7 @@ fn simulate(blueprint: &Blueprint, max_time: u32) -> u32 {
                 new_state.ores.ore -= blueprint.geo.0;
                 new_state.ores.obs -= blueprint.geo.1;
                 new_state.robs.geo += 1;
-                earl = min!(earl, new_state.time);
+                earl = many_min!(earl, new_state.time);
             }
             queue.push(new_state);
         }

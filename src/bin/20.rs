@@ -1,4 +1,4 @@
-use aoc::helpers::to_vec;
+use elves::parsers::vec_lines;
 use itertools::Itertools;
 
 #[derive(Debug)]
@@ -8,7 +8,7 @@ struct MixedPacket {
 }
 
 pub fn part_one(input: &str) -> Option<isize> {
-    let mut packets = to_vec(input.trim(), '\n')
+    let mut packets = vec_lines(input.trim())
         .iter()
         .enumerate()
         .map(|(idx, x)| MixedPacket {
@@ -36,7 +36,7 @@ pub fn part_one(input: &str) -> Option<isize> {
 }
 pub fn part_two(input: &str) -> Option<isize> {
     const DC_KEY: isize = 811589153;
-    let mut packets = to_vec::<isize>(input.trim(), '\n')
+    let mut packets = vec_lines::<isize>(input.trim())
         .iter()
         .enumerate()
         .map(|(idx, x)| MixedPacket {

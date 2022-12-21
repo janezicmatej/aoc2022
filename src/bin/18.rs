@@ -1,11 +1,10 @@
-use aoc::helpers::to_vec_vec;
-use aoc::{max, min};
+use elves::{many_max, many_min, parsers::as_vec_vec};
 use hashbrown::HashSet;
 use itertools::any;
 
 pub fn part_one(input: &str) -> Option<isize> {
     let cubes = HashSet::<[isize; 3]>::from_iter(
-        to_vec_vec::<isize>(input.trim(), '\n', ',')
+        as_vec_vec::<isize>(input.trim(), '\n', ',')
             .iter()
             .map(|x| [x[0], x[1], x[2]]),
     );
@@ -27,7 +26,7 @@ pub fn part_one(input: &str) -> Option<isize> {
 }
 pub fn part_two(input: &str) -> Option<isize> {
     let cubes = HashSet::<[isize; 3]>::from_iter(
-        to_vec_vec::<isize>(input.trim(), '\n', ',')
+        as_vec_vec::<isize>(input.trim(), '\n', ',')
             .iter()
             .map(|x| [x[0], x[1], x[2]]),
     );
@@ -36,8 +35,8 @@ pub fn part_two(input: &str) -> Option<isize> {
     let mut dfs_max: isize = isize::min_value();
 
     for [x, y, z] in cubes.iter() {
-        dfs_min = *min!(&dfs_min, x, y, z);
-        dfs_max = *max!(&dfs_max, x, y, z);
+        dfs_min = *many_min!(&dfs_min, x, y, z);
+        dfs_max = *many_max!(&dfs_max, x, y, z);
     }
 
     dfs_min -= 1;
