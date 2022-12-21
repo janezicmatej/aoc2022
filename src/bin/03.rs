@@ -1,15 +1,12 @@
-use std::ops::Not;
-
-use aoc::helpers::ASCII;
 use hashbrown::{HashMap, HashSet};
 use itertools::Itertools;
 use lazy_static::lazy_static;
 
 lazy_static! {
-    static ref PRIORITY: HashMap<char, u32> = ASCII
-        .iter()
+    static ref PRIORITY: HashMap<char, u32> = ('a'..='z')
+        .chain('A'..='Z')
         .enumerate()
-        .map(|(i, x)| (*x, (i + 1) as u32))
+        .map(|(i, x)| (x, (i + 1) as u32))
         .collect();
 }
 
@@ -34,15 +31,15 @@ pub fn part_one(input: &str) -> Option<u32> {
 
 pub fn part_two(input: &str) -> Option<u32> {
     let mut score = 0;
-    let mut map = HashMap::with_capacity(ASCII.len());
-    let mut set = HashSet::with_capacity(ASCII.len());
+    let mut map = HashMap::with_capacity(26 * 2);
+    let mut set = HashSet::with_capacity(26 * 2);
 
     for rucksacks in input.trim().split('\n').collect_vec().chunks(3) {
         map.clear();
         for rucksack in rucksacks.iter() {
             set.clear();
             for c in rucksack.chars() {
-                if set.contains(&c).not() {
+                if !set.contains(&c) {
                     *map.entry(c).or_insert(0) += 1;
                     set.insert(c);
                 };
