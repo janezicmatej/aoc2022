@@ -1,4 +1,4 @@
-use aoc::helpers::to_vec;
+use itertools::Itertools;
 pub fn part_one(input: &str) -> Option<u32> {
     Some(
         input
@@ -10,13 +10,15 @@ pub fn part_one(input: &str) -> Option<u32> {
     )
 }
 pub fn part_two(input: &str) -> Option<u32> {
-    let mut max: Vec<u32> = input
-        .trim()
-        .split("\n\n")
-        .map(|x| to_vec(x, '\n').iter().sum())
-        .collect();
-    max.sort_by(|a, b| b.cmp(a));
-    Some(max[..3].iter().sum())
+    Some(
+        input
+            .trim()
+            .split("\n\n")
+            .map(|x| to_vec(x, '\n').iter().sum::<u32>())
+            .sorted_by(|a, b| b.cmp(a))
+            .take(3)
+            .sum(),
+    )
 }
 fn main() {
     let input = &aoc::read_file("inputs", 1);
