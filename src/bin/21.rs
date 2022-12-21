@@ -66,16 +66,13 @@ fn reverse_monkey_bfs(
     target: u64,
     actions: &HashMap<String, Operation>,
 ) -> u64 {
-    let left_right_rec = |x, y, left_f: fn(u64, u64) -> u64, right_f: fn(u64, u64) -> u64| {
-        let left = monkey_bfs(x, actions);
-        let right = monkey_bfs(y, actions);
-        if let Some(n) = left {
-            reverse_monkey_bfs(y, left_f(n, target), actions)
-        } else if let Some(n) = right {
-            reverse_monkey_bfs(x, right_f(n, target), actions)
-        } else {
-            unreachable!()
-        }
+    let left_right_rec = |x, y, left_f: fn(u64, u64) -> u64, right_f: fn(u64, u64) -> u64| match (
+        monkey_bfs(x, actions),
+        monkey_bfs(y, actions),
+    ) {
+        (Some(n), None) => reverse_monkey_bfs(y, left_f(n, target), actions),
+        (None, Some(n)) => reverse_monkey_bfs(x, right_f(n, target), actions),
+        (_, _) => unreachable!(),
     };
 
     match start {
@@ -108,18 +105,16 @@ pub fn part_two(input: &str) -> Option<u64> {
 
     actions.remove("humn");
 
-    if let Add(x, y) | Substract(x, y) | Multiply(x, y) | Divide(x, y) = &actions["root"] {
-        let left = monkey_bfs(x, &actions);
-        let right = monkey_bfs(y, &actions);
-        if let Some(n) = left {
-            return Some(reverse_monkey_bfs(y, n, &actions));
-        } else if let Some(n) = right {
-            return Some(reverse_monkey_bfs(x, n, &actions));
-        } else {
-            unreachable!()
+    match &actions["root"] {
+        Add(x, y) | Substract(x, y) | Multiply(x, y) | Divide(x, y) => {
+            match (monkey_bfs(x, &actions), monkey_bfs(y, &actions)) {
+                (Some(n), None) => Some(reverse_monkey_bfs(y, n, &actions)),
+                (None, Some(n)) => Some(reverse_monkey_bfs(x, n, &actions)),
+                (_, _) => unreachable!(),
+            }
         }
+        _ => unreachable!(),
     }
-    unreachable!()
 }
 fn main() {
     let input = &aoc::read_file("inputs", 21);
