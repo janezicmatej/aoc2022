@@ -1,20 +1,8 @@
+use elves::types::{LiteralOther, LiteralOther::*};
 use hashbrown::HashMap;
 use Operation::*;
-use Value::*;
 
-enum Value {
-    Said(u64),
-    Heard(String),
-}
-
-impl From<&str> for Value {
-    fn from(value: &str) -> Self {
-        match value.parse::<u64>() {
-            Ok(x) => Said(x),
-            Err(_) => Heard(value.to_string()),
-        }
-    }
-}
+type Value = LiteralOther<u64, String>;
 
 enum Operation {
     Say(Value),
@@ -45,8 +33,8 @@ impl From<&str> for Operation {
 
 fn monkey_dfs(start: &Value, actions: &HashMap<String, Operation>) -> Option<u64> {
     match start {
-        Said(x) => Some(*x),
-        Heard(heard) => match actions.get(heard)? {
+        Literal(x) => Some(*x),
+        Other(heard) => match actions.get(heard)? {
             Say(x) => monkey_dfs(x, actions),
             Add(x, y) => Some(monkey_dfs(x, actions)? + monkey_dfs(y, actions)?),
             Sub(x, y) => Some(monkey_dfs(x, actions)? - monkey_dfs(y, actions)?),
@@ -67,8 +55,8 @@ fn reverse_monkey_dfs(start: &Value, target: u64, actions: &HashMap<String, Oper
     };
 
     match start {
-        Said(_) => target,
-        Heard(heard) => match actions.get(heard) {
+        Literal(_) => target,
+        Other(heard) => match actions.get(heard) {
             Some(value) => match value {
                 Say(x) => reverse_monkey_dfs(x, target, actions),
                 Add(x, y) => left_right_rec(x, y, |x, t| t - x, |x, t| t - x),
@@ -86,7 +74,7 @@ pub fn part_one(input: &str) -> Option<u64> {
     for (monke, action) in input.lines().map(|x| x.split_once(": ").unwrap()) {
         actions.insert(monke.to_string(), Operation::from(action));
     }
-    monkey_dfs(&Heard("root".to_string()), &actions)
+    monkey_dfs(&Other("root".to_string()), &actions)
 }
 pub fn part_two(input: &str) -> Option<u64> {
     let mut actions = HashMap::new();
